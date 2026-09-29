@@ -16,9 +16,11 @@ import {
     populateProfileDropdown,
     getConnectionDisplayName,
 } from './connectionutil.js';
+import { MacrosParser } from '../../../macros.js';
 
 const MODULE_NAME = 'summaryception';
 const LOG_PREFIX = '[Summaryception]';
+const MEMORY_MACRO_NAME = 'summaryception_memory';
 // const TRACE_MODE = true;  // ultra-verbose logging
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -120,6 +122,7 @@ Write in short phrases, no more than 20; output must be a single line:`,
     lastCustomPrompt: '',          // Auto-saved when switching away from custom
     pauseSummarization: false,  // true = stop processing, keep injecting
     disableGhosting: false,  // true = mark as summarized but don't hide messages
+    macroOnly: false,  // true = expose memory only through {{summaryception_memory}}
 
     stripPatterns: [
         '<|channel>thought',
@@ -1521,19 +1524,20 @@ function assembleSummaryBlock() {
 // ─── Injection via setExtensionPrompt ────────────────────────────────
 
 let _lastInjected = '';
+let _memoryMacroRegistered = false;
 
 function updateInjection() {
     try {
         const { setExtensionPrompt } = SillyTavern.getContext();
         const s = getSettings();
 
-        if (!s.enabled) {
-            if (_lastInjected !== '') {
-                setExtensionPrompt(MODULE_NAME, '',
-                    TUNING.injectionPosition, TUNING.injectionDepth,
-                    TUNING.injectionScan, TUNING.injectionRole);
-                _lastInjected = '';
-            }
+        if (!s.enabled || s.macroOnly) {
+            // In Macro Only mode, Prompt Manager owns placement. Always clear
+            // the legacy depth-12 extension prompt so memory cannot be injected twice.
+            setExtensionPrompt(MODULE_NAME, '',
+                TUNING.injectionPosition, TUNING.injectionDepth,
+                TUNING.injectionScan, TUNING.injectionRole);
+            _lastInjected = '';
             return;
         }
 
@@ -1549,6 +1553,26 @@ function updateInjection() {
     } catch (e) {
         log('updateInjection error:', e);
     }
+}
+
+function registerSummaryceptionMemoryMacro() {
+    if (_memoryMacroRegistered) return true;
+
+    try {
+        // This legacy API is intentional: current SillyTavern bridges it into
+        // Macro 2.0 when enabled, while still supporting the legacy engine.
+        MacrosParser.registerMacro(
+            MEMORY_MACRO_NAME,
+            () => getSettings().enabled ? (assembleSummaryBlock() || '') : '',
+            'Current Summaryception historical memory block'
+        );
+        _memoryMacroRegistered = true;
+        console.log(LOG_PREFIX, `Registered {{${MEMORY_MACRO_NAME}}}`);
+    } catch (e) {
+        console.error(LOG_PREFIX, 'Could not register memory macro:', e);
+    }
+
+    return _memoryMacroRegistered;
 }
 
 // ─── Event Handlers ──────────────────────────────────────────────────
@@ -1666,6 +1690,7 @@ function updateUI() {
         $('#sc_enabled').prop('checked', s.enabled);
         $('#sc_pause_summarization').prop('checked', s.pauseSummarization);
         $('#sc_disable_ghosting').prop('checked', s.disableGhosting);
+        $('#sc_macro_only').prop('checked', s.macroOnly);
         $('#sc_verbatim_turns').val(s.verbatimTurns);
         $('#sc_verbatim_turns_val').text(s.verbatimTurns);
         $('#sc_turns_per_summary').val(s.turnsPerSummary);
@@ -1997,6 +2022,21 @@ function bindUIEvents() {
         if ($(this).prop('checked')) {
             toastr.info(
                 'Message hiding disabled. Summarized messages will remain visible but still be excluded from LLM context via the sc_ghosted flag.',
+                'Summaryception',
+                { timeOut: TUNING.toastLonger }
+            );
+        }
+    });
+
+    $(document).on('change', '#sc_macro_only', function () {
+        const s = getSettings();
+        s.macroOnly = $(this).prop('checked');
+        saveSettings();
+        updateInjection();
+
+        if (s.macroOnly) {
+            toastr.info(
+                'Macro Only enabled. Put {{summaryception_memory}} in a custom Prompt Manager entry.',
                 'Summaryception',
                 { timeOut: TUNING.toastLonger }
             );
@@ -2465,6 +2505,7 @@ function bindUIEvents() {
         s.summarizerUserPrompt = defaultSettings.summarizerUserPrompt;
         s.promptPreset = defaultSettings.promptPreset;
         s.injectionTemplate = defaultSettings.injectionTemplate;
+        s.macroOnly = defaultSettings.macroOnly;
         s.stripPatterns = [...defaultSettings.stripPatterns];
         s.summarizerResponseLength = defaultSettings.summarizerResponseLength;
 
@@ -2755,6 +2796,7 @@ async function fetchProfilesFallback(selectElement, currentValue) {
     } = SillyTavern.getContext();
 
     getSettings();
+    registerSummaryceptionMemoryMacro();
 
     const html = await renderExtensionTemplateAsync(
         'third-party/Extension-Summaryception',

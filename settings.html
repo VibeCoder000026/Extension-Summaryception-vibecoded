@@ -371,6 +371,18 @@
                     </div>
 
                     <div class="sc-row">
+                        <label class="checkbox_label" for="sc_macro_only">
+                            <input type="checkbox" id="sc_macro_only" />
+                            <span>Macro Only (native Prompt Manager placement)</span>
+                        </label>
+                        <small class="sc-hint">
+                            Disables Summaryception's automatic in-chat depth-12 injection. Put
+                            <code>{{summaryception_memory}}</code> in a custom Chat Completion prompt
+                            and drag that prompt wherever you want in SillyTavern's Prompt Manager.
+                        </small>
+                    </div>
+
+                    <div class="sc-row">
                         <label for="sc_injection_template">
                             <span>Injection Wrapper Template</span>
                             <small class="sc-hint">Wraps the assembled block. Use <code>{{summary}}</code> for the combined text.</small>
