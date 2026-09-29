@@ -2799,7 +2799,7 @@ async function fetchProfilesFallback(selectElement, currentValue) {
     registerSummaryceptionMemoryMacro();
 
     const html = await renderExtensionTemplateAsync(
-        'third-party/Extension-Summaryception',
+        'third-party/Extension-Summaryception-vibecoded',
         'settings',
         {}
     );
