@@ -1,3 +1,34 @@
+## Fork Changes
+
+This fork adds a small set of quality-of-life improvements focused on prompt placement and fork compatibility.
+
+### Native Prompt Manager placement
+
+Summaryception now exposes its assembled memory through the macro:
+
+```text
+{{summaryception_memory}}
+```
+
+This allows the generated historical memory block to be placed inside a custom SillyTavern Chat Completion prompt and positioned anywhere in the native Prompt Manager stack.
+
+### Macro Only mode
+
+A new **Macro Only (native Prompt Manager placement)** option has been added to Summaryception's Advanced Settings.
+
+When enabled:
+
+- Summaryception disables its original fixed in-chat depth injection.
+- The memory remains available through `{{summaryception_memory}}`.
+- Users can choose the prompt role and exact position through SillyTavern's Prompt Manager.
+- Duplicate injection is avoided.
+
+When disabled, Summaryception retains its original injection behavior.
+
+### Macro compatibility
+
+The custom macro is registered through SillyTavern's `MacrosParser` API, allowing it to work with the standard macro-processing path used by SillyTavern and other extensions.
+
 # 🧠 Summaryception
 
 ### Layered Recursive Memory for SillyTavern
