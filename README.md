@@ -1,6 +1,5 @@
 ## Fork Changes
 
-This fork adds a small set of quality-of-life improvements focused on prompt placement and fork compatibility.
 
 ### Native Prompt Manager placement
 
